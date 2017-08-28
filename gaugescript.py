@@ -235,6 +235,43 @@ def acos_( stack ):
     A = stack.pop()
     stack.append( math.acos( A ) )
 
+def cot_( stack ):
+    A = stack.pop()
+    stack.append( 1.0 / math.tan( A ) )
+
+def log_( stack ):
+    A = stack.pop()
+    stack.append( math.log( A ) )
+
+def square_( stack ):
+    A = stack.pop()
+    stack.append( A * A )
+
+def asin_( stack ):
+    A = stack.pop()
+    stack.append( math.asin( A ) )
+
+# Note that this returns a fixed epsilon which might
+# not be right. Gaugescript eps takes an argument implying
+# that eps depends on the value given.
+def eps_( stack ):
+    stack.pop()
+    stack.append( sys.float_info.epsilon )
+
+def logN_( stack ):
+    B = stack.pop()
+    A = stack.pop()
+    stack.append( math.log( A, B ) )
+
+def sqrt_( stack ):
+    A = stack.pop()
+    stack.append( math.sqrt( A ) )
+
+def atan2_( stack ):
+    B = stack.pop()
+    A = stack.pop()
+    stack.append( math.atan2( A, B ) )
+
 funcTable = {
     'abs' : abs_,
     'int' : int_,
@@ -246,7 +283,21 @@ funcTable = {
     'min' : min_,
     'sin' : sin_,
     'acos' : acos_,
+    'ctg' : cot_,
+    'ln' : log_,
+    'sqr' : square_,
+    'asin' : asin_,
+    'eps' : eps_,
+    'log' : logN_,
+    'sqrt' : sqrt_,
+    'atg2' : atan2_,
 }
+
+def printHelp():
+    print "Commands:"
+    print "pstack\tPrint the stack"
+    print "pvars\tPrint the variables"
+    print "quit\tQuit the program (shortcut q)"
 
 def main():
     repl = True
@@ -258,8 +309,11 @@ def main():
             print
             repl = False
             continue
-        if s == 'quit':
+        if s == 'quit' or s == 'q':
             repl = False
+            continue
+        if s == 'help':
+            printHelp()
             continue
         if s == 'pstack':
             print stack
