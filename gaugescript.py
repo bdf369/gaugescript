@@ -272,6 +272,28 @@ def atan2_( stack ):
     A = stack.pop()
     stack.append( math.atan2( A, B ) )
 
+def exp_( stack ):
+    A = stack.pop()
+    stack.append( math.exp( A ) )
+
+def max_( stack ):
+    B = stack.pop()
+    A = stack.pop()
+    stack.append( A if A >= B else B )
+
+def pow_( stack ):
+    B = stack.pop()
+    A = stack.pop()
+    stack.append( math.pow( A, B ) )
+
+def tan_( stack ):
+    A = stack.pop()
+    stack.append( math.tan( A ) )
+
+def atan_( stack ):
+    A = stack.pop()
+    stack.append( math.atan( A ) )
+
 funcTable = {
     'abs' : abs_,
     'int' : int_,
@@ -291,6 +313,11 @@ funcTable = {
     'log' : logN_,
     'sqrt' : sqrt_,
     'atg2' : atan2_,
+    'exp' : exp_,
+    'max' : max_,
+    'pow' : pow_,
+    'tg' : tan_,
+    'atg' : atan_,
 }
 
 def printHelp():
