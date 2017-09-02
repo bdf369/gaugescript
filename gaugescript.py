@@ -294,6 +294,35 @@ def atan_( stack ):
     A = stack.pop()
     stack.append( math.atan( A ) )
 
+def div_( stack ):
+    B = stack.pop()
+    A = stack.pop()
+    stack.append( int(A)/int(B) )
+
+def ceil_( stack ):
+    A = stack.pop()
+    stack.append( math.ceil( A ) )
+
+def round_( stack ):
+    A = stack.pop()
+    stack.append( round( A ) )
+
+def dnor_( stack ):
+    A = stack.pop()
+    stack.append( A % 360 )
+
+def rddg_( stack ):
+    A = stack.pop()
+    stack.append( math.degrees( A ) )
+
+def dgrd_( stack ):
+    A = stack.pop()
+    stack.append( math.radians( A ) )
+
+def rnor_( stack ):
+    A = stack.pop()
+    stack.append( A % ( 2 * math.pi ) )
+
 funcTable = {
     'abs' : abs_,
     'int' : int_,
@@ -318,6 +347,15 @@ funcTable = {
     'pow' : pow_,
     'tg' : tan_,
     'atg' : atan_,
+    'div' : div_,
+    'ceil' : ceil_,
+    'near' : round_,
+    'dnor' : dnor_,
+    'd360' : dnor_,
+    'rdeg' : dnor_,
+    'rddg' : rddg_,
+    'dgrd' : dgrd_,
+    'rnor' : rnor_,
 }
 
 def printHelp():
