@@ -29,6 +29,48 @@
 # - connect to FSX etc using simconnect
 #
 
+# Implementing conditionals
+# Gauge script supports conditionals using the following
+# syntax: if{ ... } els{ ... }
+# This can be translated to:
+# false -> goto lbl1
+# ...
+# goto lbl2
+# lbl1:
+# ...
+# lbl2:
+#
+# I think a goto can be implemented by consuming tokens
+# without evaluating them, thus if we have a goto, just
+# go into a state where evaluation is disabled and then
+# is re-enabled when token '}' is encountered.
+#
+# A backward goto is more complicated, requiring a rewind
+# to a recorded point in the token stream, unless the script
+# is first "compiled" into a form where instruction positions
+# can be numbered and then a goto means just loading an
+# address into an instruction pointer.
+#
+# Since this is an interpreter the compilation approach is
+# not used. Instead for conditionals use the following
+# algorithm:
+# token 'if{' pop and save to cond
+# -> if cond is false set state to discard
+# token 'els{' invert cond
+# -> if cond is false set state to discard
+# in discard state if '}' is encountered, reset discard state
+#
+# TODO:
+# A problem with the above is what is if's are nested? Then
+# cond is overwritten. So cond needs to be a stack:
+# algorithm:
+# token 'if{' pop and push to condstack and save to cond
+# -> if cond is false set state to discard
+# token 'els{' invert cond
+# -> if cond is false set state to discard
+# '}' -> pop cond stack and save to cond
+# in discard state if '}' is encountered, reset discard state
+
 import sys
 import re
 import math
@@ -43,6 +85,7 @@ lexTable = [
     ( 'OP', re.compile( r'(\+\+)|(\-\-)' ) ),
     ( 'OP', re.compile( r'\/\-\/|\?' ) ),
     ( 'OP', re.compile( r'[\+\-\*\/\%]' ) ),
+    ( 'OP', re.compile( r'if\{|\}|els\{' ) ),
     ( 'ID', re.compile( r'[a-zA-Z_]+' ) ),
     ( 'SPACE', re.compile( r'\s+') ),
     ( 'VAREXPR', re.compile( r'\(([a-zA-Z_: ]+)(,\s*([a-zA-Z]+))?\)' ) ),
@@ -50,6 +93,8 @@ lexTable = [
 ]
 
 varDict = {}
+discardState = False
+condVal = None
 
 def pop( stack ):
     stack.pop()
@@ -166,6 +211,25 @@ def logicalOr( stack ):
     A = stack.pop()
     stack.append( A or B )
 
+def if_( stack ):
+    global condVal
+    global discardState
+    A = stack.pop()
+    condVal = A
+    if not condVal:
+        discardState = True
+
+def els_( stack ):
+    global condVal
+    global discardState
+    condVal = not condVal
+    if not condVal:
+        discardState = True
+
+def endif_( stack ):
+    global discardState
+    discardState = False
+
 opTable = {
     '+' : add,
     '-' : sub,
@@ -195,6 +259,9 @@ opTable = {
     '||' : logicalOr,
     'and' : logicalAnd,
     '&&' : logicalAnd,
+    'if{' : if_,
+    'els{' : els_,
+    '}' : endif_,
 }
 
 def abs_( stack ):
@@ -365,6 +432,8 @@ def printHelp():
     print "quit\tQuit the program (shortcut q)"
 
 def main():
+    global condVal
+    global discardState
     repl = True
     stack = []
     while repl:
@@ -394,6 +463,8 @@ def main():
                 if result:
                     i = result.end()
                     match = True
+                    if discardState and result.group(0) != '}':
+                        break
                     #print "match", tokType, result.group(0)
                     if tokType == 'INT':
                         stack.append( int( result.group( 0 ) ) )
