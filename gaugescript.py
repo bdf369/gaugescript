@@ -29,48 +29,6 @@
 # - connect to FSX etc using simconnect
 #
 
-# Implementing conditionals
-# Gauge script supports conditionals using the following
-# syntax: if{ ... } els{ ... }
-# This can be translated to:
-# false -> goto lbl1
-# ...
-# goto lbl2
-# lbl1:
-# ...
-# lbl2:
-#
-# I think a goto can be implemented by consuming tokens
-# without evaluating them, thus if we have a goto, just
-# go into a state where evaluation is disabled and then
-# is re-enabled when token '}' is encountered.
-#
-# A backward goto is more complicated, requiring a rewind
-# to a recorded point in the token stream, unless the script
-# is first "compiled" into a form where instruction positions
-# can be numbered and then a goto means just loading an
-# address into an instruction pointer.
-#
-# Since this is an interpreter the compilation approach is
-# not used. Instead for conditionals use the following
-# algorithm:
-# token 'if{' pop and save to cond
-# -> if cond is false set state to discard
-# token 'els{' invert cond
-# -> if cond is false set state to discard
-# in discard state if '}' is encountered, reset discard state
-#
-# TODO:
-# A problem with the above is what is if's are nested? Then
-# cond is overwritten. So cond needs to be a stack:
-# algorithm:
-# token 'if{' pop and push to condstack and save to cond
-# -> if cond is false set state to discard
-# token 'els{' invert cond
-# -> if cond is false set state to discard
-# '}' -> pop cond stack and save to cond
-# in discard state if '}' is encountered, reset discard state
-
 import sys
 import re
 import math
@@ -93,8 +51,6 @@ lexTable = [
 ]
 
 varDict = {}
-discardState = False
-condVal = None
 
 def pop( stack ):
     stack.pop()
@@ -211,24 +167,62 @@ def logicalOr( stack ):
     A = stack.pop()
     stack.append( A or B )
 
+#
+# Conditional expressions
+# 
+# Uses a stack to allow for nested expressions
+# If a condition evaluates to false, tokens are discarded
+# until the expression ends, though conditional tokens are
+# evaluated to keep the stack state current.
+#
+# Example:
+#            false if{ op op } els{ op op }
+# condval:         f         f    t
+# condsttack:      f         []   t       []
+# discard:         t         f    f       f
+#
+#             true if{ op op false if{ op op } op } els{ op op true if{ op op } op }
+# condval:         t                f        t         f
+# condsttack:      t               tf        t    []   f             ff       f    []
+# discard:         f                t        f    f    t              t       t    f
+#
+
+discardState = False
+condVal = None
+condStack = []
+
 def if_( stack ):
     global condVal
+    global condStack
     global discardState
-    A = stack.pop()
+    if discardState:
+        A = False
+    else:
+        A = stack.pop()
     condVal = A
+    condStack.append( condVal )
     if not condVal:
         discardState = True
 
 def els_( stack ):
     global condVal
+    global condStack
     global discardState
     condVal = not condVal
+    condStack.append( condVal )
     if not condVal:
         discardState = True
 
 def endif_( stack ):
+    global condVal
+    global condStack
     global discardState
-    discardState = False
+    condStack.pop()
+    if len( condStack ):
+        condVal = condStack[ -1 ]
+        discardState = not condVal
+    else:
+        discardState = False
 
 opTable = {
     '+' : add,
@@ -463,7 +457,7 @@ def main():
                 if result:
                     i = result.end()
                     match = True
-                    if discardState and result.group(0) != '}':
+                    if discardState and result.group(0) not in ['}','if{','els{']:
                         break
                     #print "match", tokType, result.group(0)
                     if tokType == 'INT':
