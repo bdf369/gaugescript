@@ -1,5 +1,5 @@
 # gaugescript
-A rudimentary ESP gaugescript interpreter written in Python
+A rudimentary ESP gaugescript interpreter written in Python. This is for FSX.
 
 Note: This program is in a very early state and is far from complete.
 
